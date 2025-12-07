@@ -1,14 +1,8 @@
 // =============================================
-// DOM ELEMENTS
+// DOM ELEMENT REFERENCES (will be set after components load)
 // =============================================
-const documentTypeSelect = document.getElementById('document-type');
-const documentTitle = document.getElementById('document-title');
-const documentTypeLabel = document.getElementById('document-type-label');
-const documentNumber = document.getElementById('document-number');
-const quoteSection = document.getElementById('quote-section');
-const bankingSection = document.getElementById('banking-section');
-const invoiceReference = document.getElementById('invoice-reference');
-const tableBody = document.querySelector('#item-table tbody');
+let documentTypeSelect, documentTitle, documentTypeLabel, documentNumber,
+    quoteSection, bankingSection, invoiceReference, tableBody;
 
 // =============================================
 // DOCUMENT TYPE MANAGEMENT
@@ -31,22 +25,26 @@ function initializeDocumentType() {
 }
 
 function updateDocumentType(type) {
+    console.log('Updating document type to:', type); // Debug log
+    
     // Update UI
     if (type === 'quote') {
         documentTitle.textContent = 'QUOTE';
         documentTitle.classList.remove('invoice-title');
         documentTypeLabel.textContent = 'QUOTE';
-        quoteSection.style.display = 'block';
-        bankingSection.style.display = 'none';
+        if (quoteSection) quoteSection.style.display = 'block';
+        if (bankingSection) bankingSection.style.display = 'none';
     } else {
         documentTitle.textContent = 'INVOICE';
         documentTitle.classList.add('invoice-title');
         documentTypeLabel.textContent = 'INVOICE';
-        quoteSection.style.display = 'none';
-        bankingSection.style.display = 'block';
+        if (quoteSection) quoteSection.style.display = 'none';
+        if (bankingSection) bankingSection.style.display = 'block';
         
         // Update invoice reference with current document number
-        invoiceReference.textContent = documentNumber.textContent;
+        if (invoiceReference && documentNumber) {
+            invoiceReference.textContent = documentNumber.textContent;
+        }
     }
     
     // Save selection
@@ -209,9 +207,12 @@ function printDocument() {
 // =============================================
 function setupEventListeners() {
     // Document type change
-    documentTypeSelect.addEventListener('change', function() {
-        updateDocumentType(this.value);
-    });
+    if (documentTypeSelect) {
+        documentTypeSelect.addEventListener('change', function() {
+            console.log('Document type changed to:', this.value); // Debug log
+            updateDocumentType(this.value);
+        });
+    }
     
     // Auto-save client info when fields change
     const clientFields = document.querySelectorAll('#client-name-input, #client-address-textarea');
@@ -224,17 +225,38 @@ function setupEventListeners() {
     });
     
     // Update invoice reference when document number changes
-    documentNumber.addEventListener('input', function() {
-        if (documentTypeSelect.value === 'invoice') {
-            invoiceReference.textContent = this.textContent;
-        }
-    });
+    if (documentNumber) {
+        documentNumber.addEventListener('input', function() {
+            if (documentTypeSelect && documentTypeSelect.value === 'invoice' && invoiceReference) {
+                invoiceReference.textContent = this.textContent;
+            }
+        });
+    }
 }
 
 // =============================================
 // INITIALIZATION
 // =============================================
 function initializeApp() {
+    console.log('Initializing app...'); // Debug log
+    
+    // Initialize DOM element references
+    documentTypeSelect = document.getElementById('document-type');
+    documentTitle = document.getElementById('document-title');
+    documentTypeLabel = document.getElementById('document-type-label');
+    documentNumber = document.getElementById('document-number');
+    quoteSection = document.getElementById('quote-section');
+    bankingSection = document.getElementById('banking-section');
+    invoiceReference = document.getElementById('invoice-reference');
+    tableBody = document.querySelector('#item-table tbody');
+    
+    console.log('DOM Elements loaded:', {
+        documentTypeSelect: !!documentTypeSelect,
+        quoteSection: !!quoteSection,
+        bankingSection: !!bankingSection,
+        invoiceReference: !!invoiceReference
+    }); // Debug log
+    
     // Set current date
     const today = new Date();
     const formattedDate = today.toLocaleDateString('en-GB');
@@ -246,28 +268,70 @@ function initializeApp() {
     attachListeners();
     calculateTotals();
     setupEventListeners();
+    
+    console.log('App initialized successfully');
 }
 
-// Load components first, then initialize app
-document.addEventListener('DOMContentLoaded', function() {
+// =============================================
+// COMPONENT LOADING
+// =============================================
+function loadComponents() {
+    console.log('Loading components...'); // Debug log
+    
     // Load header component
     fetch('header.html')
-        .then(response => response.text())
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to load header.html');
+            return response.text();
+        })
         .then(html => {
-            document.getElementById('header-container').innerHTML = html;
+            console.log('Header loaded'); // Debug log
+            const headerContainer = document.getElementById('header-container');
+            if (headerContainer) {
+                headerContainer.innerHTML = html;
+            }
+            
             // Load banking component
             return fetch('banking.html');
         })
-        .then(response => response.text())
-        .then(html => {
-            document.getElementById('banking-container').innerHTML = html;
-            // Now initialize the app
-            initializeApp();
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to load banking.html');
+            return response.text();
         })
-        .catch(error => console.error('Error loading components:', error));
+        .then(html => {
+            console.log('Banking loaded'); // Debug log
+            const bankingContainer = document.getElementById('banking-container');
+            if (bankingContainer) {
+                bankingContainer.innerHTML = html;
+                
+                // Re-initialize banking section reference after it's loaded
+                setTimeout(() => {
+                    bankingSection = document.getElementById('banking-section');
+                    console.log('Banking section reference updated:', !!bankingSection);
+                    
+                    // Now initialize the app
+                    initializeApp();
+                }, 100);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading components:', error);
+            // Still try to initialize even if components fail
+            initializeApp();
+        });
+}
+
+// =============================================
+// MAIN ENTRY POINT
+// =============================================
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM fully loaded'); // Debug log
+    loadComponents();
 });
 
-// PWA Service Worker Registration
+// =============================================
+// PWA SERVICE WORKER REGISTRATION
+// =============================================
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
@@ -279,3 +343,12 @@ if ('serviceWorker' in navigator) {
             });
     });
 }
+
+// =============================================
+// GLOBAL EXPORTS (for inline event handlers)
+// =============================================
+// Make functions available globally for inline onclick attributes
+window.deleteRow = deleteRow;
+window.addRow = addRow;
+window.printDocument = printDocument;
+window.incrementDocumentNumber = incrementDocumentNumber;
