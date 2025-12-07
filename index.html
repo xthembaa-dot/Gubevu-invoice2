@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- PWA CAPABILITIES -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#c96062">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- Favicon for browsers -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/icon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/icon-16.png">
+    <link rel="apple-touch-icon" href="assets/icons/icon-180.png">
+    
+    <title>Gubevu Electrical - Quote & Invoice</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container" id="document-template">
+        
+        <!-- Header Component will be loaded here -->
+        <div id="header-container">
+            <!-- Header content will be inserted by JavaScript -->
+        </div>
+
+        <!-- DOCUMENT TYPE SELECTOR -->
+        <div class="document-header">
+            <div class="document-type-container">
+                <div class="document-title" id="document-title">QUOTE</div>
+                <select class="document-selector" id="document-type">
+                    <option value="quote">QUOTE</option>
+                    <option value="invoice">INVOICE</option>
+                </select>
+            </div>
+            <div class="document-details">
+                <p><span id="document-type-label">QUOTE</span> #: <span id="document-number" contenteditable="true">2508</span></p>
+                <p>DATE: <span id="document-date" contenteditable="true">19/09/2025</span></p>
+            </div>
+        </div>
+
+        <!-- CLIENT SECTION - 45% width with padding 0 -->
+        <div class="client-section">
+            <span class="client-header">BILL TO</span>
+            <div class="client-name-row">
+                <input type="text" class="client-name-input" id="client-name-input" 
+                       value="Dr SK Matseke Private Hospital" 
+                       placeholder="Client/Company Name">
+            </div>
+            <div>
+                <textarea class="client-address-textarea" id="client-address-textarea" 
+                          placeholder="Enter full address including street, city, province, postal code, and country">
+Accounts Payable Department
+23967 Immink Drive, Diepkloof Zone6
+Soweto, Gauteng 1862
+South Africa</textarea>
+            </div>
+        </div>
+
+        <div class="clear-float"></div>
+
+        <!-- ITEMS TABLE - CLEAN 5-COLUMN LAYOUT -->
+        <table class="item-table" id="item-table">
+            <thead>
+                <tr>
+                    <th>ACTIVITY</th>
+                    <th>DESCRIPTION</th>
+                    <th>QTY</th>
+                    <th>AMOUNT</th>
+                    <th>TOTAL</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="item-row">
+                    <td contenteditable="true">Material</td>
+                    <td class="description-cell" contenteditable="true">
+                        Supply and deliver - Diesel pump with nozzle and dispensing hose @80l/min
+                        <button class="delete-btn" onclick="deleteRow(this)" title="Delete this item">×</button>
+                    </td>
+                    <td class="qty-cell" contenteditable="true">1</td>
+                    <td class="rate-cell" contenteditable="true">R 17,250.00</td>
+                    <td class="total-amount">R <span class="line-total">17,250.00</span></td>
+                </tr>
+                <tr class="item-row">
+                    <td contenteditable="true">Labour</td>
+                    <td class="description-cell" contenteditable="true">
+                        Installation and consumables
+                        <button class="delete-btn" onclick="deleteRow(this)" title="Delete this item">×</button>
+                    </td>
+                    <td class="qty-cell" contenteditable="true">1</td>
+                    <td class="rate-cell" contenteditable="true">R 1,650.00</td>
+                    <td class="total-amount">R <span class="line-total">1,650.00</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- TOTALS SECTION - PERFECTLY ALIGNED -->
+        <div class="totals-section">
+            <div class="totals-box">
+                <div class="total-row">
+                    <span class="total-label">SUBTOTAL:</span>
+                    <span class="total-value">R <span id="subtotal">18,900.00</span></span>
+                </div>
+                <div class="total-row">
+                    <span class="total-label">VAT (15%):</span>
+                    <span class="total-value">R <span id="vat-amount">2,835.00</span></span>
+                </div>
+                <div class="total-row grand-total">
+                    <span>TOTAL:</span>
+                    <span class="total-value">R <span id="grand-total">21,735.00</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Banking Component will be loaded here -->
+        <div id="banking-container">
+            <!-- Banking content will be inserted by JavaScript -->
+        </div>
+
+        <!-- QUOTE ACCEPTANCE SECTION - BOTTOM LEFT -->
+        <div class="acceptance-section" id="quote-section">
+            <div class="acceptance-line">
+                <div class="acceptance-item">
+                    <div class="acceptance-label">
+                        <span class="acceptance-text">Accepted by:</span>
+                        <span class="inline-signature-line"></span>
+                    </div>
+                </div>
+                <div class="acceptance-item">
+                    <div class="acceptance-label">
+                        <span class="acceptance-text">Accepted date:</span>
+                        <span class="inline-signature-line"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="action-buttons">
+            <button onclick="addRow()">Add Line Item</button>
+            <button onclick="printDocument()">Print/Export PDF</button>
+            <button onclick="incrementDocumentNumber()">Next Document #</button>
+        </div>
+
+    </div>
+
+    <!-- JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>
