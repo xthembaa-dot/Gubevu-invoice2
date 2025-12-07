@@ -25,8 +25,6 @@ function initializeDocumentType() {
 }
 
 function updateDocumentType(type) {
-    console.log('Updating document type to:', type); // Debug log
-    
     // Update UI
     if (type === 'quote') {
         documentTitle.textContent = 'QUOTE';
@@ -160,19 +158,30 @@ function loadClientInfo() {
 }
 
 // =============================================
-// DOCUMENT NUMBER MANAGEMENT
+// DOCUMENT NUMBER MANAGEMENT (WITH CONFIRMATION)
 // =============================================
 function incrementDocumentNumber() {
     const currentType = documentTypeSelect.value;
     let currentNum = documentNumber.textContent;
+    let nextNum;
     
+    // Show warning if document number is empty or invalid
+    if (!currentNum.trim()) {
+        alert('⚠️ Document number is empty! Please enter a valid document number first.');
+        documentNumber.focus();
+        return;
+    }
+    
+    // Get the next number
     if (currentType === 'quote') {
         // Extract numeric part for quotes
         const match = currentNum.match(/\d+/);
         if (match) {
-            const nextNum = parseInt(match[0]) + 1;
-            documentNumber.textContent = nextNum.toString();
-            localStorage.setItem('lastQuoteNumber', nextNum.toString());
+            const nextNumInt = parseInt(match[0]) + 1;
+            nextNum = nextNumInt.toString();
+        } else {
+            alert('⚠️ Invalid quote number format! Expected format: 2508');
+            return;
         }
     } else {
         // For invoices, handle INV- prefix
@@ -180,18 +189,39 @@ function incrementDocumentNumber() {
             const numPart = currentNum.replace('INV-', '');
             const match = numPart.match(/\d+/);
             if (match) {
-                const nextNum = parseInt(match[0]) + 1;
-                documentNumber.textContent = 'INV-' + nextNum;
-                localStorage.setItem('lastInvoiceNumber', 'INV-' + nextNum);
-                invoiceReference.textContent = 'INV-' + nextNum;
+                const nextNumInt = parseInt(match[0]) + 1;
+                nextNum = 'INV-' + nextNumInt;
+            } else {
+                alert('⚠️ Invalid invoice number format! Expected format: INV-2508');
+                return;
             }
         } else {
             // If no INV- prefix, add it
-            const nextNum = 'INV-2508';
-            documentNumber.textContent = nextNum;
-            localStorage.setItem('lastInvoiceNumber', nextNum);
-            invoiceReference.textContent = nextNum;
+            nextNum = 'INV-2508';
         }
+    }
+    
+    // Show confirmation dialog
+    const confirmed = confirm(`⚠️ Are you sure you want to increment the document number?\n\nCurrent: ${currentNum}\nNext: ${nextNum}\n\nClick OK to continue or Cancel to keep current number.`);
+    
+    if (confirmed) {
+        // Update the document number
+        documentNumber.textContent = nextNum;
+        
+        // Update localStorage
+        if (currentType === 'quote') {
+            localStorage.setItem('lastQuoteNumber', nextNum);
+        } else {
+            localStorage.setItem('lastInvoiceNumber', nextNum);
+            if (invoiceReference) {
+                invoiceReference.textContent = nextNum;
+            }
+        }
+        
+        // Show success message
+        setTimeout(() => {
+            alert(`✅ Document number updated to: ${nextNum}`);
+        }, 100);
     }
 }
 
@@ -199,7 +229,15 @@ function incrementDocumentNumber() {
 // UTILITY FUNCTIONS
 // =============================================
 function printDocument() {
-    window.print();
+    // Save current state before printing
+    saveClientInfo();
+    
+    // Show print confirmation
+    const confirmed = confirm('🖨️ Ready to print/export PDF?\n\nMake sure:\n1. Document number is correct\n2. Client details are accurate\n3. All line items are correct\n\nClick OK to continue or Cancel to review.');
+    
+    if (confirmed) {
+        window.print();
+    }
 }
 
 // =============================================
@@ -209,8 +247,16 @@ function setupEventListeners() {
     // Document type change
     if (documentTypeSelect) {
         documentTypeSelect.addEventListener('change', function() {
-            console.log('Document type changed to:', this.value); // Debug log
-            updateDocumentType(this.value);
+            // Show warning when switching document types
+            const confirmed = confirm(`⚠️ Switch document type?\n\nCurrent: ${documentTypeLabel.textContent}\nNew: ${this.value.toUpperCase()}\n\nThis will show/hide banking details and acceptance section.\n\nClick OK to continue or Cancel to keep current type.`);
+            
+            if (confirmed) {
+                updateDocumentType(this.value);
+            } else {
+                // Revert the select to previous value
+                const currentType = localStorage.getItem('documentType') || 'quote';
+                this.value = currentType;
+            }
         });
     }
     
@@ -227,10 +273,55 @@ function setupEventListeners() {
     // Update invoice reference when document number changes
     if (documentNumber) {
         documentNumber.addEventListener('input', function() {
-            if (documentTypeSelect && documentTypeSelect.value === 'invoice' && invoiceReference) {
-                invoiceReference.textContent = this.textContent;
+            // Validate document number format
+            const currentType = documentTypeSelect.value;
+            const currentNum = this.textContent.trim();
+            
+            if (currentType === 'invoice') {
+                // Check if invoice number starts with INV-
+                if (currentNum && !currentNum.startsWith('INV-')) {
+                    const addPrefix = confirm(`⚠️ Invoice number doesn't start with "INV-".\n\nDo you want to add the prefix automatically?\n\nCurrent: ${currentNum}\nWith prefix: INV-${currentNum}\n\nClick OK to add prefix or Cancel to keep as is.`);
+                    
+                    if (addPrefix) {
+                        this.textContent = 'INV-' + currentNum;
+                    }
+                }
+                
+                if (invoiceReference) {
+                    invoiceReference.textContent = this.textContent;
+                }
             }
+            
+            // Auto-save document number changes
+            setTimeout(saveDocumentNumber, 500);
         });
+    }
+    
+    // Warn before leaving page with unsaved changes
+    window.addEventListener('beforeunload', function(e) {
+        // Check if there are unsaved changes (simple check)
+        const hasItems = document.querySelectorAll('.item-row').length > 0;
+        
+        if (hasItems) {
+            // Show warning (modern browsers show generic message)
+            e.preventDefault();
+            e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+            return e.returnValue;
+        }
+    });
+}
+
+// Save document number to localStorage
+function saveDocumentNumber() {
+    const currentType = documentTypeSelect.value;
+    const currentNum = documentNumber.textContent.trim();
+    
+    if (currentNum) {
+        if (currentType === 'quote') {
+            localStorage.setItem('lastQuoteNumber', currentNum);
+        } else {
+            localStorage.setItem('lastInvoiceNumber', currentNum);
+        }
     }
 }
 
@@ -238,8 +329,6 @@ function setupEventListeners() {
 // INITIALIZATION
 // =============================================
 function initializeApp() {
-    console.log('Initializing app...'); // Debug log
-    
     // Initialize DOM element references
     documentTypeSelect = document.getElementById('document-type');
     documentTitle = document.getElementById('document-title');
@@ -249,13 +338,6 @@ function initializeApp() {
     bankingSection = document.getElementById('banking-section');
     invoiceReference = document.getElementById('invoice-reference');
     tableBody = document.querySelector('#item-table tbody');
-    
-    console.log('DOM Elements loaded:', {
-        documentTypeSelect: !!documentTypeSelect,
-        quoteSection: !!quoteSection,
-        bankingSection: !!bankingSection,
-        invoiceReference: !!invoiceReference
-    }); // Debug log
     
     // Set current date
     const today = new Date();
@@ -269,15 +351,15 @@ function initializeApp() {
     calculateTotals();
     setupEventListeners();
     
-    console.log('App initialized successfully');
+    // Auto-save on load
+    saveClientInfo();
+    saveDocumentNumber();
 }
 
 // =============================================
 // COMPONENT LOADING
 // =============================================
 function loadComponents() {
-    console.log('Loading components...'); // Debug log
-    
     // Load header component
     fetch('header.html')
         .then(response => {
@@ -285,7 +367,6 @@ function loadComponents() {
             return response.text();
         })
         .then(html => {
-            console.log('Header loaded'); // Debug log
             const headerContainer = document.getElementById('header-container');
             if (headerContainer) {
                 headerContainer.innerHTML = html;
@@ -299,7 +380,6 @@ function loadComponents() {
             return response.text();
         })
         .then(html => {
-            console.log('Banking loaded'); // Debug log
             const bankingContainer = document.getElementById('banking-container');
             if (bankingContainer) {
                 bankingContainer.innerHTML = html;
@@ -307,7 +387,6 @@ function loadComponents() {
                 // Re-initialize banking section reference after it's loaded
                 setTimeout(() => {
                     bankingSection = document.getElementById('banking-section');
-                    console.log('Banking section reference updated:', !!bankingSection);
                     
                     // Now initialize the app
                     initializeApp();
@@ -325,7 +404,6 @@ function loadComponents() {
 // MAIN ENTRY POINT
 // =============================================
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM fully loaded'); // Debug log
     loadComponents();
 });
 
